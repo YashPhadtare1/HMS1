@@ -12,12 +12,12 @@ pip install -r requirements.txt || {
 # Create necessary directories
 mkdir -p static/images/doctors
 mkdir -p instance
-mkdir -p /var/lib/sqlite
+mkdir -p data
 
 # Set permissions
 chmod -R 755 static
 chmod -R 755 instance
-chmod -R 755 /var/lib/sqlite
+chmod -R 755 data
 
 # Initialize the database
 echo "Initializing database..."
