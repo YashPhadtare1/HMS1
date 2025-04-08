@@ -21,6 +21,15 @@ app.secret_key = os.environ.get('SECRET_KEY', 'your_secret_key_here')
 app.config['UPLOAD_FOLDER'] = 'static/images/doctors'
 app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg'}
 
+# Initialize database if it doesn't exist
+db_path = get_db_path()
+if not os.path.exists(db_path):
+    logger.info(f"Database not found at {db_path}. Initializing...")
+    init_db()
+    logger.info("Database initialized successfully")
+else:
+    logger.info(f"Database found at {db_path}")
+
 # Context processors
 @app.context_processor
 def utility_processor():
