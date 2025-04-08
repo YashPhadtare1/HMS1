@@ -454,10 +454,10 @@ def set_doctor_slots(doctor_id):
             return redirect(url_for('set_doctor_slots', doctor_id=doctor_id))
         
         try:
-            conn.execute('DELETE FROM doctor_slots WHERE doctor_id = ? AND day = ? AND hospital_id = ?', 
+            conn.execute('DELETE FROM doctor_slots WHERE doctor_id = ? AND day_of_week = ? AND hospital_id = ?', 
                         (doctor_id, day, session['hospital_id']))
             conn.execute('''
-                INSERT INTO doctor_slots (doctor_id, day, start_time, end_time, break_start, break_end, hospital_id)
+                INSERT INTO doctor_slots (doctor_id, day_of_week, start_time, end_time, break_start, break_end, hospital_id)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             ''', (doctor_id, day, start_time, end_time, break_start, break_end, session['hospital_id']))
             conn.commit()
@@ -474,7 +474,7 @@ def set_doctor_slots(doctor_id):
             SELECT * FROM doctor_slots 
             WHERE doctor_id = ? AND hospital_id = ?
             ORDER BY 
-                CASE day
+                CASE day_of_week
                     WHEN 'Monday' THEN 1
                     WHEN 'Tuesday' THEN 2
                     WHEN 'Wednesday' THEN 3
