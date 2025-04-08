@@ -23,6 +23,30 @@ chmod -R 755 data
 echo "Initializing database..."
 python -c "from database import init_db; init_db()"
 
-# Verify database was created
+# Verify database was created and tables exist
 echo "Verifying database..."
-python -c "from database import check_database_exists; print('Database exists:', check_database_exists())" 
+python -c "
+import sqlite3
+import os
+from database import get_db_path
+
+db_path = get_db_path()
+print(f'Database path: {db_path}')
+print(f'Database exists: {os.path.exists(db_path)}')
+
+if os.path.exists(db_path):
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    # Check if tables exist
+    cursor.execute('SELECT name FROM sqlite_master WHERE type=\"table\"')
+    tables = cursor.fetchall()
+    print(f'Tables in database: {tables}')
+    
+    # Check if staff table exists
+    cursor.execute('SELECT * FROM staff LIMIT 1')
+    staff = cursor.fetchall()
+    print(f'Staff records: {staff}')
+    
+    conn.close()
+" 
