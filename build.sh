@@ -12,10 +12,17 @@ pip install -r requirements.txt || {
 # Create necessary directories
 mkdir -p static/images/doctors
 mkdir -p instance
+mkdir -p /var/lib/sqlite
 
 # Set permissions
 chmod -R 755 static
 chmod -R 755 instance
+chmod -R 755 /var/lib/sqlite
 
-# Initialize the database if it doesn't exist
-python -c "from database import init_db; init_db()" 
+# Initialize the database
+echo "Initializing database..."
+python -c "from database import init_db; init_db()"
+
+# Verify database was created
+echo "Verifying database..."
+python -c "from database import check_database_exists; print('Database exists:', check_database_exists())" 
