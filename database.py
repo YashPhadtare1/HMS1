@@ -126,8 +126,10 @@ def init_db():
                 end_time TEXT NOT NULL,
                 break_start TEXT,
                 break_end TEXT,
+                hospital_id INTEGER NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (doctor_id) REFERENCES doctors(id)
+                FOREIGN KEY (doctor_id) REFERENCES doctors(id),
+                FOREIGN KEY (hospital_id) REFERENCES staff(id)
             );
             ''')
             
