@@ -510,7 +510,7 @@ def get_doctor_slots(doctor_id, date):
     try:
         slot_info = conn.execute('''
             SELECT * FROM doctor_slots 
-            WHERE doctor_id = ? AND day = ? AND hospital_id = ?
+            WHERE doctor_id = ? AND day_of_week = ? AND hospital_id = ?
         ''', (doctor_id, day, session['hospital_id'])).fetchone()
         
         if not slot_info:
