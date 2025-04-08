@@ -5,7 +5,7 @@ services:
     buildCommand: |
       chmod +x build.sh
       ./build.sh
-    startCommand: gunicorn app:app
+    startCommand: gunicorn app:app --workers 2 --timeout 120
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.11
@@ -15,9 +15,12 @@ services:
         value: production
       - key: PYTHONPATH
         value: /opt/render/project/src
+      - key: FLASK_APP
+        value: app.py
     disk:
       name: hospital-data
       mountPath: /var/lib/sqlite
       sizeGB: 1
     healthCheckPath: /
     autoDeploy: true
+    plan: free
