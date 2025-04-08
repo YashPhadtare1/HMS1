@@ -9,9 +9,13 @@ logger = logging.getLogger(__name__)
 
 def get_db_path():
     """Determine the appropriate database path for different environments."""
+    # Use a path within the application's directory structure
+    app_dir = os.path.dirname(os.path.abspath(__file__))
+    
     # Check if we're running on Render
     if 'RENDER' in os.environ:
-        db_dir = '/var/lib/sqlite'
+        # Use a directory within the application's directory
+        db_dir = os.path.join(app_dir, 'data')
         # Ensure the directory exists
         if not os.path.exists(db_dir):
             os.makedirs(db_dir, exist_ok=True)
@@ -19,7 +23,7 @@ def get_db_path():
         return os.path.join(db_dir, 'hospital.db')
     else:
         # Local development path
-        instance_path = os.path.join(os.path.dirname(__file__), 'instance')
+        instance_path = os.path.join(app_dir, 'instance')
         if not os.path.exists(instance_path):
             os.makedirs(instance_path, exist_ok=True)
             logger.info(f"Created instance directory: {instance_path}")
