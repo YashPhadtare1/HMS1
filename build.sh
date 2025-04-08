@@ -4,7 +4,10 @@ set -o errexit
 
 # Install dependencies
 pip install --upgrade pip
-pip install -r requirements.txt
+pip install -r requirements.txt || {
+  echo "Failed to install dependencies. Trying with --no-deps..."
+  pip install --no-deps -r requirements.txt
+}
 
 # Create necessary directories
 mkdir -p static/images/doctors
