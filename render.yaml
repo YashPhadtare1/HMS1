@@ -19,10 +19,6 @@ services:
         value: app.py
       - key: RENDER
         value: true
-    disk:
-      name: hospital-data
-      mountPath: /var/lib/sqlite
-      sizeGB: 1
     healthCheckPath: /
     autoDeploy: true
     plan: free
