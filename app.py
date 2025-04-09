@@ -23,12 +23,26 @@ app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg'}
 
 # Initialize database if it doesn't exist
 db_path = get_db_path()
-if not os.path.exists(db_path):
-    logger.info(f"Database not found at {db_path}. Initializing...")
-    init_db()
-    logger.info("Database initialized successfully")
-else:
-    logger.info(f"Database found at {db_path}")
+try:
+    if not os.path.exists(db_path):
+        logger.info(f"Database not found at {db_path}. Initializing...")
+        init_db()
+        logger.info("Database initialized successfully")
+    else:
+        logger.info(f"Database found at {db_path}")
+        
+    # Verify database connection
+    conn = get_db_connection()
+    conn.execute("SELECT 1")  # Simple query to test connection
+    conn.close()
+    logger.info("Database connection verified")
+except Exception as e:
+    logger.error(f"Database initialization error: {e}")
+    # Create a basic error page if database is not accessible
+    @app.route('/')
+    def error_page():
+        return render_template('errors/database_error.html'), 500
+    raise  # Re-raise the exception for proper error handling
 
 # Context processors
 @app.context_processor
