@@ -8,6 +8,7 @@ import pandas as pd
 from io import BytesIO
 import logging
 from database import get_db_path, init_db, check_database_exists, get_db_connection
+from migrate_db import migrate_database
 
 # Configure logging
 logging.basicConfig(
@@ -30,6 +31,8 @@ try:
         logger.info("Database initialized successfully")
     else:
         logger.info(f"Database found at {db_path}")
+        # Run migration to update schema if needed
+        migrate_database()
         
     # Verify database connection
     conn = get_db_connection()
