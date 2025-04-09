@@ -115,8 +115,10 @@ def init_db():
                 diagnosis TEXT NOT NULL,
                 medicines TEXT NOT NULL,
                 instructions TEXT,
+                hospital_id INTEGER NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (appointment_id) REFERENCES appointments(id)
+                FOREIGN KEY (appointment_id) REFERENCES appointments(id),
+                FOREIGN KEY (hospital_id) REFERENCES staff(id)
             );
 
             CREATE TABLE doctor_slots (
