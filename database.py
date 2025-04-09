@@ -2,6 +2,7 @@ import sqlite3
 import os
 import logging
 from werkzeug.security import generate_password_hash
+import time
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -152,10 +153,30 @@ def init_db():
 
 def get_db_connection():
     """Create and return a database connection with row factory."""
-    db_path = get_db_path()
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    return conn
+    max_retries = 3
+    retry_delay = 1  # seconds
+    
+    for attempt in range(max_retries):
+        try:
+            db_path = get_db_path()
+            # Ensure the database directory exists
+            os.makedirs(os.path.dirname(db_path), exist_ok=True)
+            
+            conn = sqlite3.connect(db_path, timeout=20)  # Increased timeout
+            conn.row_factory = sqlite3.Row
+            
+            # Test the connection
+            conn.execute("SELECT 1")
+            return conn
+        except sqlite3.Error as e:
+            logger.error(f"Database connection attempt {attempt + 1} failed: {e}")
+            if attempt < max_retries - 1:
+                time.sleep(retry_delay)
+                continue
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error during database connection: {e}")
+            raise
 
 def check_database_exists():
     """Check if the database file exists."""
