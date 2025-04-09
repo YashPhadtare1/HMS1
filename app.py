@@ -7,7 +7,7 @@ import os
 import pandas as pd
 from io import BytesIO
 import logging
-from database import get_db_path, init_db, check_database_exists
+from database import get_db_path, init_db, check_database_exists, get_db_connection
 
 # Configure logging
 logging.basicConfig(
