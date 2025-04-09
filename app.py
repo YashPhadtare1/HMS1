@@ -824,99 +824,110 @@ def prescriptions(appointment_id):
         return redirect(url_for('login'))
 
     conn = get_db_connection()
-    appointment = conn.execute('''
-        SELECT a.*, p.name as patient_name, p.age, p.gender, p.medical_history,
-               d.name as doctor_name, d.specialization
-        FROM appointments a
-        JOIN patients p ON a.patient_id = p.id
-        JOIN doctors d ON a.doctor_id = d.id
-        WHERE a.id = ? AND a.hospital_id = ?
-    ''', (appointment_id, session['hospital_id'])).fetchone()
+    try:
+        # Verify appointment belongs to this doctor and hospital
+        appointment = conn.execute('''
+            SELECT a.*, p.name as patient_name, p.age, p.gender, p.medical_history,
+                   d.name as doctor_name, d.specialization
+            FROM appointments a
+            JOIN patients p ON a.patient_id = p.id
+            JOIN doctors d ON a.doctor_id = d.id
+            WHERE a.id = ? AND a.doctor_id = ? AND a.hospital_id = ?
+        ''', (appointment_id, session['user_id'], session['hospital_id'])).fetchone()
 
-    if not appointment:
-        flash('Appointment not found', 'danger')
-        return redirect(url_for('doctor_appointments'))
+        if not appointment:
+            flash('Appointment not found or unauthorized access', 'danger')
+            return redirect(url_for('doctor_appointments'))
 
-    if request.method == 'POST':
-        diagnosis = request.form.get('diagnosis', '').strip()
-        medicines = []
-        
-        medicine_count = int(request.form.get('medicine_count', 1))
-        
-        for i in range(1, medicine_count + 1):
-            name = request.form.get(f'medicine_name_{i}', '').strip()
-            dosage = request.form.get(f'medicine_dosage_{i}', '').strip()
-            frequency = request.form.get(f'medicine_frequency_{i}', '').strip()
+        if request.method == 'POST':
+            diagnosis = request.form.get('diagnosis', '').strip()
+            medicines = []
             
-            if name and dosage and frequency:
-                morning = '1' if request.form.get(f'medicine_morning_{i}') else '0'
-                afternoon = '1' if request.form.get(f'medicine_afternoon_{i}') else '0'
-                evening = '1' if request.form.get(f'medicine_evening_{i}') else '0'
-                meal = request.form.get(f'medicine_meal_{i}', 'after')
+            medicine_count = int(request.form.get('medicine_count', 1))
+            
+            for i in range(1, medicine_count + 1):
+                name = request.form.get(f'medicine_name_{i}', '').strip()
+                dosage = request.form.get(f'medicine_dosage_{i}', '').strip()
+                frequency = request.form.get(f'medicine_frequency_{i}', '').strip()
                 
-                medicine_str = f"{name}|{dosage}|{frequency}|{morning}|{afternoon}|{evening}|{meal}"
-                medicines.append(medicine_str)
+                if name and dosage and frequency:
+                    morning = '1' if request.form.get(f'medicine_morning_{i}') else '0'
+                    afternoon = '1' if request.form.get(f'medicine_afternoon_{i}') else '0'
+                    evening = '1' if request.form.get(f'medicine_evening_{i}') else '0'
+                    meal = request.form.get(f'medicine_meal_{i}', 'after')
+                    
+                    medicine_str = f"{name}|{dosage}|{frequency}|{morning}|{afternoon}|{evening}|{meal}"
+                    medicines.append(medicine_str)
+            
+            instructions = request.form.get('instructions', '').strip()
+            medicines_str = '\n'.join(medicines) if medicines else ''
+
+            try:
+                existing = conn.execute('''
+                    SELECT * FROM prescriptions 
+                    WHERE appointment_id = ? AND hospital_id = ?
+                ''', (appointment_id, session['hospital_id'])).fetchone()
+                
+                if existing:
+                    conn.execute('''
+                        UPDATE prescriptions 
+                        SET diagnosis=?, medicines=?, instructions=?
+                        WHERE appointment_id=? AND hospital_id=?
+                    ''', (diagnosis, medicines_str, instructions, appointment_id, session['hospital_id']))
+                else:
+                    conn.execute('''
+                        INSERT INTO prescriptions (appointment_id, diagnosis, medicines, instructions, hospital_id)
+                        VALUES (?, ?, ?, ?, ?)
+                    ''', (appointment_id, diagnosis, medicines_str, instructions, session['hospital_id']))
+                
+                conn.commit()
+                flash('Prescription saved successfully!', 'success')
+                
+                if request.form.get('action') == 'print':
+                    return redirect(url_for('print_prescription', appointment_id=appointment_id))
+                return redirect(url_for('prescriptions', appointment_id=appointment_id))
+            except Exception as e:
+                conn.rollback()
+                flash('Error saving prescription', 'danger')
+                app.logger.error(f"Prescription save error: {str(e)}")
+                return redirect(url_for('prescriptions', appointment_id=appointment_id))
+
+        # Get prescription if exists
+        prescription = conn.execute('''
+            SELECT * FROM prescriptions 
+            WHERE appointment_id = ? AND hospital_id = ?
+        ''', (appointment_id, session['hospital_id'])).fetchone()
         
-        instructions = request.form.get('instructions', '').strip()
-        medicines_str = '\n'.join(medicines) if medicines else ''
-
-        try:
-            existing = conn.execute('SELECT * FROM prescriptions WHERE appointment_id = ?', 
-                                  (appointment_id,)).fetchone()
-            if existing:
-                conn.execute('''
-                    UPDATE prescriptions 
-                    SET diagnosis=?, medicines=?, instructions=?
-                    WHERE appointment_id=?
-                ''', (diagnosis, medicines_str, instructions, appointment_id))
-            else:
-                conn.execute('''
-                    INSERT INTO prescriptions (appointment_id, diagnosis, medicines, instructions, hospital_id)
-                    VALUES (?, ?, ?, ?, ?)
-                ''', (appointment_id, diagnosis, medicines_str, instructions, session['hospital_id']))
-            
-            conn.commit()
-            flash('Prescription saved successfully!', 'success')
-            
-            if request.form.get('action') == 'print':
-                return redirect(url_for('print_prescription', appointment_id=appointment_id))
-            return redirect(url_for('prescriptions', appointment_id=appointment_id))
-        except Exception as e:
-            flash('Error saving prescription', 'danger')
-            app.logger.error(f"Prescription save error: {str(e)}")
-        finally:
-            conn.close()
-
-    # Get prescription if exists
-    prescription = conn.execute('SELECT * FROM prescriptions WHERE appointment_id = ?', 
-                               (appointment_id,)).fetchone()
-    
-    # Process prescription for display
-    prescription_dict = None
-    if prescription:
-        prescription_dict = dict(prescription)
-        medicines_parsed = []
-        if prescription['medicines']:
-            for medicine in prescription['medicines'].split('\n'):
-                if medicine.strip():
-                    parts = medicine.split('|')
-                    if len(parts) == 7:  # Ensure we have all parts
-                        medicines_parsed.append({
-                            'name': parts[0],
-                            'dosage': parts[1],
-                            'frequency': parts[2],
-                            'morning': parts[3],
-                            'afternoon': parts[4],
-                            'evening': parts[5],
-                            'meal': parts[6]
-                        })
-        prescription_dict['medicines_parsed'] = medicines_parsed
-    
-    conn.close()
-    
-    return render_template('doctor/prescriptions.html',
-                         appointment=appointment,
-                         prescription=prescription_dict)
+        # Process prescription for display
+        prescription_dict = None
+        if prescription:
+            prescription_dict = dict(prescription)
+            medicines_parsed = []
+            if prescription['medicines']:
+                for medicine in prescription['medicines'].split('\n'):
+                    if medicine.strip():
+                        parts = medicine.split('|')
+                        if len(parts) == 7:
+                            medicines_parsed.append({
+                                'name': parts[0],
+                                'dosage': parts[1],
+                                'frequency': parts[2],
+                                'morning': parts[3],
+                                'afternoon': parts[4],
+                                'evening': parts[5],
+                                'meal': parts[6]
+                            })
+            prescription_dict['medicines_parsed'] = medicines_parsed
+        
+        return render_template('doctor/prescriptions.html',
+                            appointment=appointment,
+                            prescription=prescription_dict)
+    except Exception as e:
+        flash('Error loading prescription data', 'danger')
+        app.logger.error(f"Prescription load error: {str(e)}")
+        return redirect(url_for('doctor_appointments'))
+    finally:
+        conn.close()
 
 @app.route('/doctor/print_prescription/<int:appointment_id>')
 def print_prescription(appointment_id):
